@@ -31,7 +31,7 @@ const (
 	dnsmasqLeases      = "/var/lib/libvirt/dnsmasq/%s.leases"
 	dnsmasqStatus      = "/var/lib/libvirt/dnsmasq/%s.status"
 
-	domainXMLTemplate = `<domain type='kvm'>
+	domainXMLTemplate = `<domain type='qemu'>
   <name>{{.MachineName}}</name> <memory unit='M'>{{.Memory}}</memory>
   <vcpu>{{.CPU}}</vcpu>
   <features><acpi/><apic/><pae/></features>
@@ -585,20 +585,25 @@ func (d *Driver) getMAC() (string, error) {
 
 func (d *Driver) getIPByMACFromLeaseFile(mac string) (string, error) {
 	leaseFile := fmt.Sprintf(dnsmasqLeases, d.PrivateNetwork)
+        log.Warnf("File: %s", leaseFile)
 	data, err := ioutil.ReadFile(leaseFile)
 	if err != nil {
 		log.Debugf("Failed to retrieve dnsmasq leases from %s", leaseFile)
 		return "", err
 	}
+        log.Warnf("Data : %#v", string(data))
 	for lineNum, line := range strings.Split(string(data), "\n") {
+                log.Warnf("split line: %s", line)
 		if len(line) == 0 {
 			continue
 		}
 		entries := strings.Split(line, " ")
+                log.Warnf("split entries: %#v", entries)
 		if len(entries) < 3 {
 			log.Warnf("Malformed dnsmasq line %d", lineNum+1)
 			return "", errors.New("Malformed dnsmasq file")
 		}
+                log.Warnf("split compare: >>>%s<<< and >>>%s<<<", strings.ToLower(entries[1]), strings.ToLower(mac))
 		if strings.ToLower(entries[1]) == strings.ToLower(mac) {
 			log.Debugf("IP address: %s", entries[2])
 			return entries[2], nil
@@ -623,6 +628,7 @@ func (d *Driver) getIPByMacFromSettings(mac string) (string, error) {
 		return "", err
 	}
 	statusFile := fmt.Sprintf(dnsmasqStatus, bridge_name)
+        log.Warnf("Status file: %s", statusFile)
 	data, err := ioutil.ReadFile(statusFile)
 	type Lease struct {
 		Ip_address  string `json:"ip-address"`
@@ -634,6 +640,7 @@ func (d *Driver) getIPByMacFromSettings(mac string) (string, error) {
 	err = json.Unmarshal(data, &s)
 	if err != nil {
 		log.Warnf("Failed to decode dnsmasq lease status: %s", err)
+                log.Warnf("Data : %#v", data)
 		return "", err
 	}
 	for _, value := range s {
@@ -659,7 +666,9 @@ func (d *Driver) GetIP() (string, error) {
 	if ip == "" {
 		ip, err = d.getIPByMacFromSettings(mac)
 	}
-	log.Debugf("Unable to locate IP address for MAC %s", mac)
+        if ip == "" {
+		log.Debugf("Unable to locate IP address for MAC %s", mac)
+        }
 	return ip, err
 }
 
