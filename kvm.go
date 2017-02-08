@@ -31,7 +31,7 @@ const (
 	dnsmasqLeases      = "/var/lib/libvirt/dnsmasq/%s.leases"
 	dnsmasqStatus      = "/var/lib/libvirt/dnsmasq/%s.status"
 
-	domainXMLTemplate = `<domain type='kvm'>
+	domainXMLTemplate = `<domain type='qemu'>
   <name>{{.MachineName}}</name> <memory unit='M'>{{.Memory}}</memory>
   <vcpu>{{.CPU}}</vcpu>
   <features><acpi/><apic/><pae/></features>
